@@ -86,10 +86,13 @@ def get_model(train_mat, train_mat_local, domains, args, device):
     else:
         raise NotImplementedError
     
+#def adjust_learning_rate(optimizer, lr):
+#    for param_group in optimizer.param_groups:
+#        param_group['lr'] = lr
 
-def adjust_learning_rate(optimizer, lr):
+def adjust_learning_rate(optimizer, args):
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group['lr'] = max(param_group['lr'] * args.decay, args.min_lr)
 
 def save_history(train_loss, HR, NDCG, HR_ave_best, epoch_best, args, exp_name, exp_path):
     his = {
@@ -322,8 +325,6 @@ if __name__ == '__main__':
     parser.add_argument('--ckpt_epoch', type=int, help='Epoch of the ckpt to load.')
     parser.add_argument('--experiment_name', type=str, default='noname')
     parser.add_argument('--patience', type=int, default=20, help='How many epoches without improvement is tolerant before early stopping.')
-    parser.add_argument('--node_embed', type=int, default=64)
-    parser.add_argument('--edge_embed', type=int, default=3)
     # dataset parameters
     parser.add_argument('--dataset', type=int, default=0, help="0 for ['CDs_and_Vinyl', 'Digital_Music', 'Musical_Instruments']")
     parser.add_argument('--data_dir', type=str, default='./data/Amazon_2018')
@@ -331,8 +332,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_ng', type=int, default=1)
     # training hyper parameters
     parser.add_argument('--epoch', type=int, default=100)
+    parser.add_argument('--node_embed', type=int, default=64)
+    parser.add_argument('--edge_embed', type=int, default=3)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--decay', type=float, default=1.0, help='Learning rate decay speed.')
+    parser.add_argument('--min_lr', type=float, default=0.0001)
     parser.add_argument('--reg', type=float, default=0.01)
     parser.add_argument('--reg_domain', nargs = '*', type=float, default=[])
     # evaluation parameters
