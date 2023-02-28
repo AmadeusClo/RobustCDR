@@ -1,0 +1,14 @@
+20160601
+[CDs_and_Vinyl]
+users: 3518, items: 2844
+Records: 29873
+Density: 0.29857497987045123%
+[Digital_Music]
+users: 346, items: 339
+Records: 2703
+Density: 2.304465701570413%
+[Musical_Instruments]
+users: 3113, items: 1487
+Records: 22365
+Density: 0.48314647277151523%
+total users : 6913, total items : 4670
