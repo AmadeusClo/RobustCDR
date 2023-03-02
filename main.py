@@ -319,12 +319,12 @@ if __name__ == '__main__':
     # model parameters
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
     parser.add_argument('--model', type=str, default='BPRMF', help='BPRMF, HeroGRAPH, ReCDR, ours')
-    parser.add_argument('--save_freq', type=int, default=50)
+    parser.add_argument('--save_freq', type=int, default=10)
     parser.add_argument('--load_model', action='store_true', default=False)
     parser.add_argument('--ckpt_name', type=str, help='Directory of the model to load.')
     parser.add_argument('--ckpt_epoch', type=int, help='Epoch of the ckpt to load.')
     parser.add_argument('--experiment_name', type=str, default='noname')
-    parser.add_argument('--patience', type=int, default=20, help='How many epoches without improvement is tolerant before early stopping.')
+    parser.add_argument('--patience', type=int, default=30, help='How many epoches without improvement is tolerant before early stopping.')
     # dataset parameters
     parser.add_argument('--dataset', type=int, default=0, help="0 for ['CDs_and_Vinyl', 'Digital_Music', 'Musical_Instruments']")
     parser.add_argument('--data_dir', type=str, default='./data/Amazon_2018')

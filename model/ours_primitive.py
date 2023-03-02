@@ -14,11 +14,11 @@ class LocalNodeGATLayer(nn.Module):
     def __init__(self, node_embed_size):
         super(LocalNodeGATLayer, self).__init__()
         self.fc1 = nn.Linear(node_embed_size, node_embed_size, bias=False)
-        self.fc2 = nn.Linear(node_embed_size*2, 1, bias=False)
+        self.fc2 = nn.Linear(node_embed_size, 1, bias=False)
     
     def message_func(self, edges):
-        return {'e' : #self.fc2(torch.tanh(self.fc1(edges.src['N']))),
-                      F.leaky_relu(self.fc2(torch.cat((self.fc1(edges.src['N']), self.fc1(edges.dst['N'])), dim=1))),
+        return {'e' : self.fc2(torch.tanh(self.fc1(edges.src['N']))),
+                      #F.leaky_relu(self.fc2(torch.cat((self.fc1(edges.src['N']), self.fc1(edges.dst['N'])), dim=1))),
                 'N' : edges.src['N']}
         
     def reduce_func(self, nodes):
@@ -196,21 +196,21 @@ class ours(nn.Module):
 
         self.local_node_embed = nn.ModuleDict()
         self.local_node_agg1 = nn.ModuleDict()
-        self.local_node_agg2 = nn.ModuleDict()
+#        self.local_node_agg2 = nn.ModuleDict()
         for domain in domains:
             self.local_node_embed[domain] = nn.Embedding(self.num_nodes, args.node_embed)
             self.local_node_agg1[domain] = LocalNodeGATLayer(args.node_embed)
-            self.local_node_agg2[domain] = LocalNodeGATLayer(args.node_embed)
+#            self.local_node_agg2[domain] = LocalNodeGATLayer(args.node_embed)
         
         self.global_node_embed = nn.Embedding(self.num_nodes, args.node_embed)
         self.global_node_agg1 = NodeGATLayer(args.node_embed, domains)
-        self.global_node_agg2 = NodeGATLayer(args.node_embed, domains)
+#        self.global_node_agg2 = NodeGATLayer(args.node_embed, domains)
         
-#        self.global_edge_embed = nn.Embedding(self.num_edges, args.edge_embed)
+        self.global_edge_embed = nn.Embedding(self.num_edges, args.edge_embed)
         #self.global_edge_agg = EdgeGATLayer(edge_embed_size, node_embed_size)
-#        self.global_edge_agg = ReCDREdgeGATLayer(args.edge_embed, args.node_embed)
+        self.global_edge_agg = ReCDREdgeGATLayer(args.edge_embed, args.node_embed)
     
-#        self.Ws = nn.Parameter(torch.FloatTensor(size=(self.num_nodes, args.node_embed)))
+        self.Ws = nn.Parameter(torch.FloatTensor(size=(self.num_nodes, args.node_embed)))
         self.reset_parameters()
 #        self.dropout = nn.Dropout(p=0.2)
     
@@ -224,20 +224,16 @@ class ours(nn.Module):
     def forward(self, target_domain):
         # local embedding
         local_emb_0 = self.local_node_embed[target_domain].weight
-#        local_Np = self.local_node_agg1[target_domain](self.local_g[target_domain], local_emb_0)
-#        local_emb_1 = local_emb_0 + self.local_node_agg1[target_domain](self.local_g[target_domain], local_emb_0)
-        local_emb_1 = self.local_node_agg1[target_domain](self.local_g[target_domain], local_emb_0)
-        local_emb_2 = self.local_node_agg2[target_domain](self.local_g[target_domain], local_emb_1)
-#        local_emb_2 = local_emb_1 + self.local_node_agg2[target_domain](self.local_g[target_domain], local_emb_1)
+        local_Np = self.local_node_agg1[target_domain](self.local_g[target_domain], local_emb_0)
+#        local_emb_1 = local_emb_0 + (self.local_node_agg1[dom_id](local_g, self.dropout(local_emb_0)))
+#        local_emb_2 = local_emb_1 + (self.local_node_agg2[dom_id](local_g, self.dropout(local_emb_1)))
         
         # global embedding
         # node
         global_emb_0 = self.global_node_embed.weight
-#        Np = self.global_node_agg1(self.ng, global_emb_0, target_domain, self.device)
-#        global_emb_1 = global_emb_0 + self.global_node_agg1(self.ng, global_emb_0, target_domain, self.device)#, local_Np)
-        global_emb_1 = self.global_node_agg1(self.ng, global_emb_0, target_domain, self.device)
-        global_emb_2 = self.global_node_agg2(self.ng, global_emb_1, target_domain, self.device)
-#        global_emb_2 = global_emb_1 + self.global_node_agg2(self.ng, global_emb_1, target_domain, self.device)
+        Np = self.global_node_agg1(self.ng, global_emb_0, target_domain, self.device)
+#        global_emb_1 = global_emb_0 + (self.global_node_agg1(ng, self.dropout(global_emb_0), dom_id))#, local_Np)
+#        global_emb_2 = global_emb_1 + (self.global_node_agg2(ng, self.dropout(global_emb_1), dom_id))
         
         # edge
 #        E = {}
@@ -246,15 +242,15 @@ class ours(nn.Module):
 #        num_interact = eg.num_edges(domain)
 #            E[domain] = self.global_edge_embed.weight[tmp : tmp + num_interact]
 #            tmp += num_interact
-# no edge
-#        num_interact = self.eg.num_edges('interact')
-#        E = {'interact': self.global_edge_embed.weight[:num_interact],
-#             'similar' : self.global_edge_embed.weight[num_interact:]}
-#        Ep = self.global_edge_agg(self.eg, E)
-#        S = self.Ws * Ep + Np# * (1-dens_norm[dom_id]) # density debias
+
+        num_interact = self.eg.num_edges('interact')
+        E = {'interact': self.global_edge_embed.weight[:num_interact],
+             'similar' : self.global_edge_embed.weight[num_interact:]}
+        Ep = self.global_edge_agg(self.eg, E)
+        S = self.Ws * Ep + Np# * (1-dens_norm[dom_id]) # density debias
         
         # fusion
-#        H = torch.cat((local_Np, Np), dim=1)
+        H = torch.cat((local_Np, S), dim=1)
 #        H = torch.cat((local_emb_0, local_emb_1, local_emb_2, global_emb_0, global_emb_1, global_emb_2), dim=1)
-        H = torch.cat((local_emb_0 + local_emb_1 + local_emb_2, global_emb_0 + global_emb_1 + global_emb_2), dim=1)
+#        H = torch.cat((local_emb_0 + local_emb_1 + local_emb_2, global_emb_0 + global_emb_1 + global_emb_2), dim=1)
         return H[:self.num_users], H[self.num_users:]

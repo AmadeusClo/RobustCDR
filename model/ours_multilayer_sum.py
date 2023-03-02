@@ -14,11 +14,11 @@ class LocalNodeGATLayer(nn.Module):
     def __init__(self, node_embed_size):
         super(LocalNodeGATLayer, self).__init__()
         self.fc1 = nn.Linear(node_embed_size, node_embed_size, bias=False)
-        self.fc2 = nn.Linear(node_embed_size*2, 1, bias=False)
+        self.fc2 = nn.Linear(node_embed_size, 1, bias=False)
     
     def message_func(self, edges):
-        return {'e' : #self.fc2(torch.tanh(self.fc1(edges.src['N']))),
-                      F.leaky_relu(self.fc2(torch.cat((self.fc1(edges.src['N']), self.fc1(edges.dst['N'])), dim=1))),
+        return {'e' : self.fc2(torch.tanh(self.fc1(edges.src['N']))),
+                      #F.leaky_relu(self.fc2(torch.cat((self.fc1(edges.src['N']), self.fc1(edges.dst['N'])), dim=1))),
                 'N' : edges.src['N']}
         
     def reduce_func(self, nodes):
