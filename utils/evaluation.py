@@ -40,7 +40,10 @@ def eval(model, device, num_ng_eval, topk, train_loss, domains, eval_data, log_p
     for domain in domains:
         HR_dom, NDCG_dom = eval_domain(model, eval_data[domain], domain, device, num_ng_eval, topk)
 #        print(f'[domain {domain}] HR@{topk} = {HR_dom}, NDCG@{topk} = {NDCG_dom}, loss = {train_loss[domain][-1]}')
-        log(f'[domain {domain}] HR@{topk} = {HR_dom}, NDCG@{topk} = {NDCG_dom}, loss = {train_loss[domain][-1]}', log_path)
+        if train_loss == None:
+            print(f'[domain {domain}] HR@{topk} = {HR_dom}, NDCG@{topk} = {NDCG_dom}')
+        else:
+            log(f'[domain {domain}] HR@{topk} = {HR_dom}, NDCG@{topk} = {NDCG_dom}, loss = {train_loss[domain][-1]}', log_path)
         HR[domain] = HR_dom
         NDCG[domain] = NDCG_dom
     return HR, NDCG

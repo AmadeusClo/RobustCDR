@@ -118,6 +118,17 @@ def save_model(model, opt, epoch, his, ckpt_name, exp_path):
     save_path = os.path.join(exp_path, ckpt_name + '.ckpt')
     torch.save(params, save_path)
 
+def get_domains(dataset):
+    if dataset == 0:
+        domains = ['CDs_and_Vinyl',
+                   'Digital_Music',
+                   'Musical_Instruments']
+    elif dataset == 1:
+        domains = ['book', 'movie', 'music']
+#        assert args.data_dir == './data/douban'
+    else:
+        raise NotImplementedError
+
 def train(args, device):
     local_time = time.localtime()
     timestr = f"{local_time.tm_year:0>4d},{local_time.tm_mon:0>2d},{local_time.tm_mday:0>2d},{local_time.tm_hour:0>2d}.{local_time.tm_min:0>2d}'{local_time.tm_sec:0>2d}''"
@@ -127,15 +138,7 @@ def train(args, device):
     log_path = os.path.join(exp_path, ".log")
 
     # datset domains & directory
-    if args.dataset == 0:
-        domains = ['CDs_and_Vinyl',
-                   'Digital_Music',
-                   'Musical_Instruments']
-    elif args.dataset == 1:
-        domains = ['book', 'movie', 'music']
-#        assert args.data_dir == './data/douban'
-    else:
-        raise NotImplementedError
+    domains = get_domains(args.dataset)
     abbr_domains = [domain.split('_')[0] for domain in domains]
     data_dir = os.path.join(args.data_dir, '+'.join(abbr_domains))
 
@@ -299,6 +302,52 @@ def train(args, device):
         plt.savefig(os.path.join(exp_path, f"evaluation_{domain}_{args.epoch}.jpg"))
         plt.close()
 
+    print('testing best model...')
+    # load best model
+    ckpt_path = os.path.join(exp_path, exp_name + f'_average_best.ckpt')
+    ckpt = torch.load(ckpt_path)
+    model = ckpt['model']
+    model.to(device)
+    # load test data
+    test_data = {}
+    for dom_id, domain in enumerate(domains):
+        test_data[domain] = np.loadtxt(os.path.join(data_dir, abbr_domains[dom_id] + '_test.txt'), dtype=int)
+    # test
+    with torch.no_grad():
+        HR, NDCG = eval(model, device, args.num_ng_eval, args.topk, None, domains, test_data, None)
+
+def test(args, device):
+    domains = get_domains(args.dataset)
+    abbr_domains = [domain.split('_')[0] for domain in domains]
+    data_dir = os.path.join(args.data_dir, '+'.join(abbr_domains))
+
+    # load global and domain-specific training data
+    train_mat = sp.load_npz(os.path.join(data_dir, '+'.join(abbr_domains) + '_train.npz'))
+    train_mat_local = {}
+    for dom_id, domain in enumerate(domains):
+        train_mat_local[domain] = sp.load_npz(os.path.join(data_dir, abbr_domains[dom_id] + '_train.npz'))
+
+    # load model params to test
+    model = get_model(train_mat, train_mat_local, domains, args, device).to(device)
+    if args.load_model: # load model ckpt from disk
+        if args.ckpt_epoch==-1:
+            ckpt_path = os.path.join('./', args.ckpt_name, args.ckpt_name + f'_average_best.ckpt')
+        else:
+            ckpt_path = os.path.join('./', args.ckpt_name, args.ckpt_name + f'_{args.ckpt_epoch}.ckpt')
+        ckpt = torch.load(ckpt_path)
+        model = ckpt['model']
+        print('Load successfully.')
+    model.to(device)
+
+    # load test data
+    test_data = {}
+    for dom_id, domain in enumerate(domains):
+        test_data[domain] = np.loadtxt(os.path.join(data_dir, abbr_domains[dom_id] + '_test.txt'), dtype=int)
+
+    # test
+    with torch.no_grad():
+        HR, NDCG = eval(model, device, args.num_ng_eval, args.topk, None, domains, test_data, None)
+
 def run(args):
     if not args.cpu:
         assert torch.cuda.is_available(), "cuda not available"
@@ -315,7 +364,8 @@ def run(args):
     if args.mode=='train':
         train(args, device)
     else:
-        raise NotImplementedError
+        assert args.load_model, "Load a model ckpt for testing."
+        test(args, device)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='train.py')
@@ -325,7 +375,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_freq', type=int, default=10)
     parser.add_argument('--load_model', action='store_true', default=False)
     parser.add_argument('--ckpt_name', type=str, help='Directory of the model to load.')
-    parser.add_argument('--ckpt_epoch', type=int, help='Epoch of the ckpt to load.')
+    parser.add_argument('--ckpt_epoch', type=int, default=-1, help='Epoch of the ckpt to load. -1 for average best ckpt.')
     parser.add_argument('--experiment_name', type=str, default='noname')
     parser.add_argument('--patience', type=int, default=30, help='How many epoches without improvement is tolerant before early stopping.')
     # dataset parameters
