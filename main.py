@@ -131,6 +131,9 @@ def train(args, device):
         domains = ['CDs_and_Vinyl',
                    'Digital_Music',
                    'Musical_Instruments']
+    elif args.dataset == 1:
+        domains = ['book', 'movie', 'music']
+#        assert args.data_dir == './data/douban'
     else:
         raise NotImplementedError
     abbr_domains = [domain.split('_')[0] for domain in domains]
@@ -326,7 +329,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment_name', type=str, default='noname')
     parser.add_argument('--patience', type=int, default=30, help='How many epoches without improvement is tolerant before early stopping.')
     # dataset parameters
-    parser.add_argument('--dataset', type=int, default=0, help="0 for ['CDs_and_Vinyl', 'Digital_Music', 'Musical_Instruments']")
+    parser.add_argument('--dataset', type=int, default=0, help="0 for ['CDs_and_Vinyl', 'Digital_Music', 'Musical_Instruments'], 1 for douban")
     parser.add_argument('--data_dir', type=str, default='./data/Amazon_2018')
     parser.add_argument('--batch_num', type=int, default=20)
     parser.add_argument('--num_ng', type=int, default=1)
